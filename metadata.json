@@ -1,0 +1,6 @@
+{
+  "name": "CitaSeguras",
+  "description": "Aplicación móvil para reducir el no-show en negocios de servicios con integraciones de Google Workspace y validación de pagos con Inteligencia Artificial de Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

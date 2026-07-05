@@ -184,15 +184,27 @@ export default function App() {
     showToast("¡Métodos de recepción de pagos guardados con éxito!");
   };
 
-  // Load state from local storage or fallback to defaults
+  // Load state from local storage or fallback to defaults (with automatic 35-day cleanup)
   useEffect(() => {
     const savedApps = localStorage.getItem("cs_appointments");
+    let loadedApps: Appointment[] = [];
     if (savedApps) {
-      setAppointments(JSON.parse(savedApps));
+      loadedApps = JSON.parse(savedApps);
     } else {
-      setAppointments(initialAppointments);
-      localStorage.setItem("cs_appointments", JSON.stringify(initialAppointments));
+      loadedApps = initialAppointments;
     }
+
+    // Auto-cleanup: remove any appointment older than 35 days to keep interface light and fast
+    const today = new Date();
+    const thirtyFiveDaysAgo = new Date(today.getTime() - 35 * 24 * 60 * 60 * 1000);
+    const cleanedApps = loadedApps.filter((app) => {
+      const appDate = new Date(app.date);
+      if (isNaN(appDate.getTime())) return true;
+      return appDate >= thirtyFiveDaysAgo;
+    });
+
+    setAppointments(cleanedApps);
+    localStorage.setItem("cs_appointments", JSON.stringify(cleanedApps));
 
     const savedStats = localStorage.getItem("cs_stats");
     if (savedStats) {

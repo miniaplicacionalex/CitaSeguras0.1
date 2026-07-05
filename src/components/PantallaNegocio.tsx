@@ -745,6 +745,13 @@ export default function PantallaNegocio({
             Limpiar Ahora
           </button>
         </div>
+
+        {/* Warning/Info Note about 35-day automatic cleanup */}
+        <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 text-left">
+          <p className="text-[10px] leading-relaxed text-amber-800 font-semibold">
+            ⚠️ <strong>Aviso de auto-limpieza:</strong> Para asegurar que la aplicación móvil se mantenga ligera, rápida y óptima, toda cita y comprobante de pago con una antigüedad de <strong>35 días o más</strong> se eliminará automáticamente del dispositivo de forma definitiva. Descarga tu reporte CSV periódicamente para respaldar tu historial de citas.
+          </p>
+        </div>
       </div>
     </div>
   );

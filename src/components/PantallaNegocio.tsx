@@ -55,6 +55,7 @@ export default function PantallaNegocio({
   
   // Local payment config state
   const [cardOrSpei, setCardOrSpei] = useState(paymentConfig.cardOrSpei || "");
+  const [referenceType, setReferenceType] = useState<"tarjeta" | "clabe">(paymentConfig.referenceType || "tarjeta");
   const [bankName, setBankName] = useState(paymentConfig.bankName || "");
   const [accountHolder, setAccountHolder] = useState(paymentConfig.accountHolder || "");
   const [alternativePayLink, setAlternativePayLink] = useState(paymentConfig.alternativePayLink || "");
@@ -123,6 +124,7 @@ export default function PantallaNegocio({
 
   useEffect(() => {
     setCardOrSpei(paymentConfig.cardOrSpei || "");
+    setReferenceType(paymentConfig.referenceType || "tarjeta");
     setBankName(paymentConfig.bankName || "");
     setAccountHolder(paymentConfig.accountHolder || "");
     setAlternativePayLink(paymentConfig.alternativePayLink || "");
@@ -187,8 +189,20 @@ export default function PantallaNegocio({
 
   // Save payment config
   const handleSavePaymentConfig = () => {
+    // Validate length based on type before saving
+    const digitsOnly = cardOrSpei.replace(/\D/g, "");
+    if (referenceType === "tarjeta" && digitsOnly.length !== 16) {
+      alert("⚠️ El número de tarjeta debe contener exactamente 16 dígitos.");
+      return;
+    }
+    if (referenceType === "clabe" && digitsOnly.length !== 18) {
+      alert("⚠️ La CLABE interbancaria debe contener exactamente 18 dígitos.");
+      return;
+    }
+
     onSavePaymentConfig({
       cardOrSpei,
+      referenceType,
       bankName,
       accountHolder,
       alternativePayLink,
@@ -397,17 +411,84 @@ export default function PantallaNegocio({
         </div>
 
         <div className="space-y-3">
+          {/* Tipo de Referencia Bancaria Selector */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Tipo de Referencia para SPEI / Depósito
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setReferenceType("tarjeta");
+                  // auto convert or format if already contains numbers
+                  const digits = cardOrSpei.replace(/\D/g, "");
+                  let formatted = "";
+                  for (let i = 0; i < digits.length && i < 16; i++) {
+                    if (i > 0 && i % 4 === 0) formatted += " ";
+                    formatted += digits[i];
+                  }
+                  setCardOrSpei(formatted);
+                }}
+                className={`py-1.5 px-3 text-[11px] font-extrabold rounded-lg border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  referenceType === "tarjeta"
+                    ? "bg-[#004ac6] border-[#004ac6] text-white shadow-xs"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <CreditCard size={12} />
+                <span># de Tarjeta (16 dígs)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setReferenceType("clabe");
+                  const digits = cardOrSpei.replace(/\D/g, "").substring(0, 18);
+                  setCardOrSpei(digits);
+                }}
+                className={`py-1.5 px-3 text-[11px] font-extrabold rounded-lg border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  referenceType === "clabe"
+                    ? "bg-[#004ac6] border-[#004ac6] text-white shadow-xs"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <Landmark size={12} />
+                <span>CLABE SPEI (18 dígs)</span>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <CreditCard size={12} className="text-slate-400" /> CLABE Interbancaria / Número de Cuenta (Referencia SPEI)
+              <CreditCard size={12} className="text-slate-400" /> {referenceType === "tarjeta" ? "Número de Tarjeta (16 dígitos)" : "CLABE Interbancaria (18 dígitos)"}
             </label>
             <input
               type="text"
               value={cardOrSpei}
-              onChange={(e) => setCardOrSpei(e.target.value)}
-              placeholder="Ej. 1234 5678 9012 3456"
-              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-[#004ac6] focus:ring-1 focus:ring-[#004ac6]"
+              onChange={(e) => {
+                const onlyDigits = e.target.value.replace(/\D/g, "");
+                if (referenceType === "tarjeta") {
+                  let formatted = "";
+                  for (let i = 0; i < onlyDigits.length && i < 16; i++) {
+                    if (i > 0 && i % 4 === 0) {
+                      formatted += " ";
+                    }
+                    formatted += onlyDigits[i];
+                  }
+                  setCardOrSpei(formatted);
+                } else {
+                  setCardOrSpei(onlyDigits.substring(0, 18));
+                }
+              }}
+              placeholder={referenceType === "tarjeta" ? "0000 0000 0000 0000" : "012345678901234567"}
+              className="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-[#004ac6] focus:ring-1 focus:ring-[#004ac6]"
             />
+            <p className="text-[9px] text-slate-400 italic">
+              {referenceType === "tarjeta"
+                ? "💡 Ingrese los 16 dígitos de su tarjeta para recibir transferencias o depósitos directos."
+                : "💡 Ingrese los 18 dígitos de su CLABE para recibir transferencias SPEI."}
+            </p>
           </div>
 
           <div className="space-y-1">

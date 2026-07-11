@@ -28,6 +28,7 @@ export interface Appointment {
 
 export interface PaymentConfig {
   cardOrSpei: string;
+  referenceType?: "tarjeta" | "clabe";
   bankName: string;
   accountHolder: string;
   alternativePayLink?: string;

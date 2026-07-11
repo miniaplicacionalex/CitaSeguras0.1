@@ -76,6 +76,7 @@ export default function App() {
 
     return {
       cardOrSpei: "1234 5678 9012 3456",
+      referenceType: "tarjeta",
       bankName: "BBVA Bancomer",
       accountHolder: "CitaSeguras Negocios S.A.",
       alternativePayLink: "https://link.mercadopago.com.mx/citaseguras",
@@ -202,6 +203,7 @@ export default function App() {
       } else {
         setPaymentConfig({
           cardOrSpei: bid === "default_business" ? "1234 5678 9012 3456" : "",
+          referenceType: bid === "default_business" ? "tarjeta" : "clabe",
           bankName: bid === "default_business" ? "BBVA Bancomer" : "",
           accountHolder: bid === "default_business" ? "CitaSeguras Negocios S.A." : "",
           alternativePayLink: bid === "default_business" ? "https://link.mercadopago.com.mx/citaseguras" : "",

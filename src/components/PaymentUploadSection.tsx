@@ -219,9 +219,16 @@ export default function PaymentUploadSection({
 
           {paymentConfig.cardOrSpei && (
             <div className="py-1">
-              <p className="text-slate-500 font-medium text-[10px]">NÚMERO DE CUENTA / CLABE:</p>
-              <p className="font-mono text-xs font-bold bg-slate-50 px-2 py-1 rounded border border-slate-100 text-center select-all my-1 text-slate-800">
+              <p className="text-slate-500 font-medium text-[10px] uppercase">
+                {paymentConfig.referenceType === "clabe" 
+                  ? "CLABE Interbancaria (18 dígitos):" 
+                  : "Número de Tarjeta de Débito (16 dígitos):"}
+              </p>
+              <p className="font-mono text-xs font-bold bg-slate-50 px-2 py-1.5 rounded border border-slate-100 text-center select-all my-1 text-slate-800 tracking-wider">
                 {paymentConfig.cardOrSpei}
+              </p>
+              <p className="text-[8px] text-slate-400 text-center italic mt-0.5">
+                💡 Toca dos veces sobre el número para copiarlo
               </p>
             </div>
           )}

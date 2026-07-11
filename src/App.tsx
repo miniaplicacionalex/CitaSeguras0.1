@@ -39,11 +39,41 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState(2); // Start with Sarah and David "Por Verificar"
 
+  // Decode URL configuration if present (for client booking link)
+  const isClientMode = typeof window !== "undefined" && window.location.search.includes("cliente=true");
+  let urlServices: ServiceConfig[] | null = null;
+  let urlPaymentConfig: PaymentConfig | null = null;
+  
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const encodedData = params.get("data");
+    if (encodedData) {
+      try {
+        const decoded = decodeURIComponent(atob(encodedData));
+        const parsed = JSON.parse(decoded);
+        if (parsed.services) {
+          urlServices = parsed.services;
+        }
+        if (parsed.paymentConfig) {
+          urlPaymentConfig = parsed.paymentConfig;
+        }
+      } catch (e) {
+        console.error("Error decoding url data parameter:", e);
+      }
+    }
+  }
+
   // Payment Config State linked to business_id (user?.uid || "default_business")
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(() => {
+    if (urlPaymentConfig) return urlPaymentConfig;
+
     const bid = "default_business";
     const saved = localStorage.getItem(`cs_payment_config_${bid}`);
     if (saved) return JSON.parse(saved);
+
+    const lastActive = localStorage.getItem("cs_payment_config_last_active");
+    if (lastActive) return JSON.parse(lastActive);
+
     return {
       cardOrSpei: "1234 5678 9012 3456",
       bankName: "BBVA Bancomer",
@@ -139,6 +169,7 @@ export default function App() {
 
   // Dynamic services/products configuration
   const [services, setServices] = useState<ServiceConfig[]>(() => {
+    if (urlServices) return urlServices;
     const saved = localStorage.getItem("cs_services_config");
     if (saved) return JSON.parse(saved);
     return [
@@ -155,25 +186,35 @@ export default function App() {
   };
 
   useEffect(() => {
+    // If we have URL data parameter, do NOT overwrite the state with defaults
+    if (isClientMode && urlPaymentConfig) {
+      return;
+    }
+
     const bid = user?.uid || "default_business";
     const saved = localStorage.getItem(`cs_payment_config_${bid}`);
     if (saved) {
       setPaymentConfig(JSON.parse(saved));
     } else {
-      setPaymentConfig({
-        cardOrSpei: bid === "default_business" ? "1234 5678 9012 3456" : "",
-        bankName: bid === "default_business" ? "BBVA Bancomer" : "",
-        accountHolder: bid === "default_business" ? "CitaSeguras Negocios S.A." : "",
-        alternativePayLink: bid === "default_business" ? "https://link.mercadopago.com.mx/citaseguras" : "",
-        refundPolicyDisclaimer: "⚠️ NOTA DE SEGURIDAD: Para asegurar el espacio de su cita y los insumos requeridos, el depósito del anticipo de reserva no es reembolsable en caso de inasistencia o de no reprogramar con al menos 24 horas de anticipación.",
-        enableUrgencyBadges: true,
-        enableReservationTimer: true,
-        conversionTacticDiscount: "5% de Descuento Extra si seleccionas pago al 100% como anticipo.",
-        whatsappTemplatePending: "Hola {nombre_cliente}, detectamos tu pago como pendiente. Por favor confírmanos si ya realizaste tu depósito/transferencia para verificarlo por IA de CitaSeguras y activar tu cita de {servicio}. ¡Gracias!",
-        whatsappTemplateConfirmed: "¡Hola {nombre_cliente}! Tu cita para {servicio} está confirmada para el día {fecha} a las {hora}. Te recordamos asistir puntualmente. ¡Te esperamos!",
-        whatsappTemplate8h: "¡Hola {nombre_cliente}! Te recordamos que tu cita para {servicio} es hoy mismo en 8 horas (a las {hora}). Por favor confírmanos que asistirás respondiendo con un 'OK' o un emoticón. ¡Gracias!",
-        whatsappTemplate2h: "⚠️ ¡Hola {nombre_cliente}! Recordatorio rápido de que tu cita para {servicio} comienza en 2 horas (a las {hora}). Agradecemos tu puntualidad. ¡Te vemos pronto!"
-      });
+      const lastActive = localStorage.getItem("cs_payment_config_last_active");
+      if (lastActive) {
+        setPaymentConfig(JSON.parse(lastActive));
+      } else {
+        setPaymentConfig({
+          cardOrSpei: bid === "default_business" ? "1234 5678 9012 3456" : "",
+          bankName: bid === "default_business" ? "BBVA Bancomer" : "",
+          accountHolder: bid === "default_business" ? "CitaSeguras Negocios S.A." : "",
+          alternativePayLink: bid === "default_business" ? "https://link.mercadopago.com.mx/citaseguras" : "",
+          refundPolicyDisclaimer: "⚠️ NOTA DE SEGURIDAD: Para asegurar el espacio de su cita y los insumos requeridos, el depósito del anticipo de reserva no es reembolsable en caso de inasistencia o de no reprogramar con al menos 24 horas de anticipación.",
+          enableUrgencyBadges: true,
+          enableReservationTimer: true,
+          conversionTacticDiscount: "5% de Descuento Extra si seleccionas pago al 100% como anticipo.",
+          whatsappTemplatePending: "Hola {nombre_cliente}, detectamos tu pago como pendiente. Por favor confírmanos si ya realizaste tu depósito/transferencia para verificarlo por IA de CitaSeguras y activar tu cita de {servicio}. ¡Gracias!",
+          whatsappTemplateConfirmed: "¡Hola {nombre_cliente}! Tu cita para {servicio} está confirmada para el día {fecha} a las {hora}. Te recordamos asistir puntualmente. ¡Te esperamos!",
+          whatsappTemplate8h: "¡Hola {nombre_cliente}! Te recordamos que tu cita para {servicio} es hoy mismo en 8 horas (a las {hora}). Por favor confírmanos que asistirás respondiendo con un 'OK' o un emoticón. ¡Gracias!",
+          whatsappTemplate2h: "⚠️ ¡Hola {nombre_cliente}! Recordatorio rápido de que tu cita para {servicio} comienza en 2 horas (a las {hora}). Agradecemos tu puntualidad. ¡Te vemos pronto!"
+        });
+      }
     }
   }, [user]);
 
@@ -181,6 +222,8 @@ export default function App() {
     const bid = user?.uid || "default_business";
     setPaymentConfig(config);
     localStorage.setItem(`cs_payment_config_${bid}`, JSON.stringify(config));
+    localStorage.setItem("cs_payment_config_default_business", JSON.stringify(config));
+    localStorage.setItem("cs_payment_config_last_active", JSON.stringify(config));
     showToast("¡Métodos de recepción de pagos guardados con éxito!");
   };
 
@@ -525,8 +568,6 @@ export default function App() {
       return false;
     }
   };
-
-  const isClientMode = typeof window !== "undefined" && window.location.search.includes("cliente=true");
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center font-sans select-none antialiased text-[#0b1c30] p-0 sm:p-4">

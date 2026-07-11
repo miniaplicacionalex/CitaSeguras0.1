@@ -63,6 +63,11 @@ export default function PantallaNegocio({
     "⚠️ NOTA DE SEGURIDAD: Para asegurar el espacio de su cita y los insumos requeridos, el depósito del anticipo de reserva no es reembolsable en caso de inasistencia o de no reprogramar con al menos 24 horas de anticipación."
   );
 
+  // Gateway automatic payment configuration
+  const [enableGateway, setEnableGateway] = useState(paymentConfig.enableGateway ?? false);
+  const [gatewayProvider, setGatewayProvider] = useState<"Stripe" | "MercadoPago" | "PayPal">(paymentConfig.gatewayProvider || "Stripe");
+  const [gatewayApiKey, setGatewayApiKey] = useState(paymentConfig.gatewayApiKey || "");
+
   // Conversion Optimization Toggles
   const [enableUrgencyBadges, setEnableUrgencyBadges] = useState(paymentConfig.enableUrgencyBadges ?? true);
   const [enableReservationTimer, setEnableReservationTimer] = useState(paymentConfig.enableReservationTimer ?? true);
@@ -94,6 +99,23 @@ export default function PantallaNegocio({
   const [isCleaning, setIsCleaning] = useState(false);
   const [isSendingReport, setIsSendingReport] = useState(false);
 
+  // Helper to generate a fully custom encoded link for clients containing current pricing & payment configs
+  const getEncodedBookingUrl = () => {
+    if (typeof window === "undefined") return "";
+    try {
+      const payload = {
+        services,
+        paymentConfig
+      };
+      const jsonStr = JSON.stringify(payload);
+      const encoded = btoa(encodeURIComponent(jsonStr));
+      return `${window.location.origin}/?cliente=true&data=${encoded}`;
+    } catch (e) {
+      console.error("Error encoding client booking URL:", e);
+      return `${window.location.origin}/?cliente=true`;
+    }
+  };
+
   // Sync state on load/prop updates
   useEffect(() => {
     setLocalServices([...services]);
@@ -114,6 +136,9 @@ export default function PantallaNegocio({
     setWhatsappTemplateConfirmed(paymentConfig.whatsappTemplateConfirmed || "¡Hola {nombre_cliente}! Tu cita para {servicio} está confirmada para el día {fecha} a las {hora}. Te recordamos asistir puntualmente. ¡Te esperamos!");
     setWhatsappTemplate8h(paymentConfig.whatsappTemplate8h || "¡Hola {nombre_cliente}! Te recordamos que tu cita para {servicio} es hoy mismo en 8 horas (a las {hora}). Por favor confírmanos que asistirás respondiendo con un 'OK' o un emoticón. ¡Gracias!");
     setWhatsappTemplate2h(paymentConfig.whatsappTemplate2h || "⚠️ ¡Hola {nombre_cliente}! Recordatorio rápido de que tu cita para {servicio} comienza en 2 horas (a las {hora}). Agradecemos tu puntualidad. ¡Te vemos pronto!");
+    setEnableGateway(paymentConfig.enableGateway ?? false);
+    setGatewayProvider(paymentConfig.gatewayProvider || "Stripe");
+    setGatewayApiKey(paymentConfig.gatewayApiKey || "");
   }, [paymentConfig]);
 
   // Handle service field changes
@@ -175,6 +200,9 @@ export default function PantallaNegocio({
       whatsappTemplateConfirmed,
       whatsappTemplate8h,
       whatsappTemplate2h,
+      enableGateway,
+      gatewayProvider,
+      gatewayApiKey,
     });
     onSuccessToast("¡Métodos de recepción de pagos y política de reembolso guardados!");
   };
@@ -421,6 +449,70 @@ export default function PantallaNegocio({
             />
           </div>
 
+          {/* PASARELA DE PAGO AUTOMÁTICA */}
+          <div className="border-t border-slate-100 pt-3 mt-1 space-y-3">
+            <div className="flex items-center justify-between bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/60">
+              <div className="space-y-0.5 pr-2">
+                <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-amber-500 fill-amber-400 animate-pulse" /> 
+                  Pasarela de Pago Automática
+                </p>
+                <p className="text-[9px] text-slate-500 leading-tight">
+                  Permite cobro directo con tarjeta. Si se aprueba, la cita se confirma automáticamente y dispara alertas de WhatsApp.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnableGateway(!enableGateway)}
+                className="text-[#004ac6] flex-shrink-0 hover:scale-105 transition-transform cursor-pointer"
+              >
+                {enableGateway ? <ToggleRight size={32} className="text-[#004ac6]" /> : <ToggleLeft size={32} className="text-slate-300" />}
+              </button>
+            </div>
+
+            {enableGateway && (
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60 space-y-3 animate-fade-in text-left">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Proveedor de Pasarela
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(["Stripe", "MercadoPago", "PayPal"] as const).map((prov) => (
+                      <button
+                        key={prov}
+                        type="button"
+                        onClick={() => setGatewayProvider(prov)}
+                        className={`py-1.5 px-2 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
+                          gatewayProvider === prov
+                            ? "bg-[#004ac6] border-[#004ac6] text-white shadow-sm"
+                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {prov}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    API Key / Token de Acceso ({gatewayProvider})
+                  </label>
+                  <input
+                    type="password"
+                    value={gatewayApiKey}
+                    onChange={(e) => setGatewayApiKey(e.target.value)}
+                    placeholder={`Ingresa tu API Key de ${gatewayProvider}`}
+                    className="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-[#004ac6] focus:ring-1 focus:ring-[#004ac6]"
+                  />
+                  <p className="text-[9px] text-slate-400 italic">
+                    La pasarela procesará de forma segura el monto del anticipo correspondiente.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
               <AlertTriangle size={12} className="text-rose-500" /> Política de Reembolso por No Asistir
@@ -559,13 +651,13 @@ export default function PantallaNegocio({
             <input
               type="text"
               readOnly
-              value={typeof window !== "undefined" ? `${window.location.origin}/?cliente=true` : ""}
-              className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] font-mono font-semibold text-[#004ac6] select-all outline-none"
+              value={getEncodedBookingUrl()}
+              className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] font-mono font-semibold text-[#004ac6] select-all outline-none animate-fade-in"
             />
             <button
               type="button"
               onClick={() => {
-                const url = typeof window !== "undefined" ? `${window.location.origin}/?cliente=true` : "";
+                const url = getEncodedBookingUrl();
                 navigator.clipboard.writeText(url);
                 setCopied(true);
                 onSuccessToast("¡Enlace de reservación copiado al portapapeles!");
@@ -581,7 +673,7 @@ export default function PantallaNegocio({
           <div className="flex justify-between items-center pt-1">
             <span className="text-[10px] text-slate-400 font-medium">✨ Listo para WhatsApp, Instagram o Facebook</span>
             <a
-              href={typeof window !== "undefined" ? `${window.location.origin}/?cliente=true` : "#"}
+              href={getEncodedBookingUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-[#004ac6] hover:underline font-bold flex items-center gap-0.5"

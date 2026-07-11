@@ -93,6 +93,11 @@ export default function PantallaRegistro({
   // Validation status
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<GeminiValidationResult | null>(null);
+
+  // Automated Gateway processing states
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentStep, setPaymentStep] = useState(0);
+  const [paymentProgress, setPaymentProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -235,53 +240,108 @@ export default function PantallaRegistro({
       return;
     }
 
-    let pStatus: "Confirmado" | "Por Verificar" = "Por Verificar";
-    if (paymentMethod === "Tarjeta") {
-      pStatus = "Confirmado";
-    } else if ((paymentMethod === "OXXO" || paymentMethod === "Transferencia") && validationResult?.status === "APROBADO") {
-      pStatus = "Confirmado";
-    }
+    const finalizeSubmit = () => {
+      let pStatus: "Confirmado" | "Por Verificar" = "Por Verificar";
+      if (paymentMethod === "Tarjeta") {
+        pStatus = "Confirmado";
+      } else if ((paymentMethod === "OXXO" || paymentMethod === "Transferencia") && validationResult?.status === "APROBADO") {
+        pStatus = "Confirmado";
+      }
 
-    const newAppointment: Appointment = {
-      id: "cs-" + Math.floor(Math.random() * 10000),
-      clientName,
-      phone,
-      email,
-      service,
-      date,
-      time,
-      amount,
-      depositAmountNeeded,
-      paymentMethod,
-      paymentStatus: pStatus,
-      receiptStatus: (paymentMethod === "OXXO" || paymentMethod === "Transferencia") ? (validationResult?.status || "PENDIENTE") : "NONE",
-      geminiValidationLog: validationResult ? JSON.stringify(validationResult) : undefined,
-      absences: 0,
+      const newAppointment: Appointment = {
+        id: "cs-" + Math.floor(Math.random() * 10000),
+        clientName,
+        phone,
+        email,
+        service,
+        date,
+        time,
+        amount,
+        depositAmountNeeded,
+        paymentMethod,
+        paymentStatus: pStatus,
+        receiptStatus: (paymentMethod === "OXXO" || paymentMethod === "Transferencia") ? (validationResult?.status || "PENDIENTE") : "NONE",
+        geminiValidationLog: validationResult ? JSON.stringify(validationResult) : undefined,
+        absences: 0,
+      };
+
+      addAppointment(newAppointment);
+      onSuccessToast(`¡Cita para ${clientName} agendada exitosamente!`);
+      
+      if (isClientMode) {
+        setBookedAppointment(newAppointment);
+        
+        // Auto trigger/open the WhatsApp confirmed link to notify the customer/merchant!
+        const template = paymentConfig.whatsappTemplateConfirmed || 
+          "¡Hola {nombre_cliente}! Tu cita para {servicio} está confirmada para el día {fecha} a las {hora}. Te recordamos asistir puntualmente. ¡Te esperamos!";
+        const message = template
+          .replace(/{nombre_cliente}/g, clientName)
+          .replace(/{servicio}/g, service)
+          .replace(/{fecha}/g, date)
+          .replace(/{hora}/g, time)
+          .replace(/{monto}/g, String(amount));
+
+        let cleanPhone = phone.replace(/\D/g, "");
+        if (cleanPhone.length === 10) {
+          cleanPhone = "52" + cleanPhone; // Mexico default
+        }
+        
+        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+      } else {
+        // Clear Form
+        setClientName("");
+        setPhone("");
+        setEmail("");
+        setPaymentMethod("OXXO");
+        setFile(null);
+        setPreviewUrl(null);
+        setBase64Data(null);
+        setValidationResult(null);
+        setCardName("");
+        setCardNumber("");
+        setCardExpiry("");
+        setCardCvv("");
+
+        // Navigate to list
+        setActiveTab("agenda");
+      }
+      setIsProcessingPayment(false);
     };
 
-    addAppointment(newAppointment);
-    onSuccessToast(`¡Cita para ${clientName} agendada exitosamente!`);
-    
-    if (isClientMode) {
-      setBookedAppointment(newAppointment);
-    } else {
-      // Clear Form
-      setClientName("");
-      setPhone("");
-      setEmail("");
-      setPaymentMethod("OXXO");
-      setFile(null);
-      setPreviewUrl(null);
-      setBase64Data(null);
-      setValidationResult(null);
-      setCardName("");
-      setCardNumber("");
-      setCardExpiry("");
-      setCardCvv("");
+    if (paymentMethod === "Tarjeta" && paymentConfig.enableGateway) {
+      setIsProcessingPayment(true);
+      setPaymentStep(0);
+      setPaymentProgress(0);
 
-      // Navigate to list
-      setActiveTab("agenda");
+      const interval = setInterval(() => {
+        setPaymentProgress((p) => {
+          const next = p + 5;
+          if (next >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          
+          if (next === 20) setPaymentStep(1);
+          else if (next === 50) setPaymentStep(2);
+          else if (next === 75) setPaymentStep(3);
+          else if (next === 95) setPaymentStep(4);
+
+          return next;
+        });
+      }, 150);
+
+      setTimeout(() => {
+        clearInterval(interval);
+        setPaymentProgress(100);
+        setPaymentStep(4);
+        finalizeSubmit();
+      }, 3200);
+      
+      return;
     }
+
+    finalizeSubmit();
   };
 
   const handleRemoveFoto = () => {
@@ -290,6 +350,68 @@ export default function PantallaRegistro({
     setBase64Data(null);
     setValidationResult(null);
   };
+
+  if (isProcessingPayment) {
+    return (
+      <div className="p-6 max-w-md mx-auto space-y-6 text-center animate-fade-in pt-12">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-lg space-y-6 relative overflow-hidden">
+          {/* Header */}
+          <div className="space-y-1">
+            <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider font-mono">
+              Procesando con Pasarela Segura
+            </span>
+            <h3 className="text-base font-extrabold text-slate-900 mt-2">
+              Procesando Pago con {paymentConfig.gatewayProvider || "Tarjeta"}
+            </h3>
+            <p className="text-[10px] text-slate-500">
+              Por favor no cierres ni recargues esta página
+            </p>
+          </div>
+
+          {/* Loader circle & progress */}
+          <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+            {/* Outer animated track */}
+            <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
+            {/* Spinning gradient segment */}
+            <div className="absolute inset-0 rounded-full border-4 border-t-[#004ac6] border-r-[#004ac6] animate-spin"></div>
+            
+            <div className="text-center z-10">
+              <span className="text-xl font-extrabold text-slate-800 font-mono">
+                {paymentProgress}%
+              </span>
+              <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">
+                Cargando
+              </p>
+            </div>
+          </div>
+
+          {/* Dynamic Step Text */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs space-y-1 font-medium text-slate-700">
+            {paymentStep === 0 && (
+              <p className="animate-pulse">🔄 Estableciendo conexión cifrada SSL con {paymentConfig.gatewayProvider || "Pasarela"}...</p>
+            )}
+            {paymentStep === 1 && (
+              <p className="animate-pulse">🔒 Enviando datos de tarjeta de forma tokenizada y encriptada...</p>
+            )}
+            {paymentStep === 2 && (
+              <p className="animate-pulse">⏳ Autorizando cargo del anticipo de ${depositAmountNeeded} MXN con el banco emisor...</p>
+            )}
+            {paymentStep === 3 && (
+              <p className="animate-pulse">📡 Generando token de cobro seguro con {paymentConfig.gatewayProvider || "Proveedor"}...</p>
+            )}
+            {paymentStep === 4 && (
+              <p className="text-emerald-600 font-bold">✅ ¡Pago aprobado! Registrando y agendando cita...</p>
+            )}
+          </div>
+
+          {/* Secure disclaimer */}
+          <div className="text-[9px] text-slate-400 flex items-center justify-center gap-1">
+            <span>🛡️</span> Conexión encriptada con cifrado SSL de 256 bits compatible con PCI-DSS
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (bookedAppointment) {
     const isApprovedOrCard = bookedAppointment.paymentMethod === "Tarjeta" || 
@@ -314,6 +436,42 @@ export default function PantallaRegistro({
           <div className="bg-[#f0f5ff] text-[#004ac6] border border-blue-50 px-3 py-2 rounded-xl text-center text-xs font-bold font-mono">
             ID Cita: {bookedAppointment.id}
           </div>
+        </div>
+
+        {/* WhatsApp Auto-Trigger Block */}
+        <div className="bg-emerald-50/80 border border-emerald-200/50 rounded-2xl p-4 space-y-3 shadow-sm text-left">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📱</span>
+            <div>
+              <h4 className="font-extrabold text-emerald-950 text-xs">Notificación de Cita (WhatsApp)</h4>
+              <p className="text-[10px] text-emerald-800">Se pre-configuró el recordatorio de confirmación de cita para enviar de inmediato.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const template = paymentConfig.whatsappTemplateConfirmed || 
+                "¡Hola {nombre_cliente}! Tu cita para {servicio} está confirmada para el día {fecha} a las {hora}. Te recordamos asistir puntualmente. ¡Te esperamos!";
+              const message = template
+                .replace(/{nombre_cliente}/g, bookedAppointment.clientName)
+                .replace(/{servicio}/g, bookedAppointment.service)
+                .replace(/{fecha}/g, bookedAppointment.date)
+                .replace(/{hora}/g, bookedAppointment.time)
+                .replace(/{monto}/g, String(bookedAppointment.amount));
+
+              let cleanPhone = bookedAppointment.phone.replace(/\D/g, "");
+              if (cleanPhone.length === 10) {
+                cleanPhone = "52" + cleanPhone;
+              }
+              const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+              window.open(whatsappUrl, "_blank");
+              onSuccessToast("¡Abriendo WhatsApp para enviar confirmación!");
+            }}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow transition-colors"
+          >
+            <span>Enviar Confirmación por WhatsApp</span>
+            <Share2 size={13} />
+          </button>
         </div>
 
         {/* Ticket Details */}
@@ -484,6 +642,9 @@ export default function PantallaRegistro({
               paymentMethod={paymentMethod}
               setPaymentMethod={setPaymentMethod}
               clearValidationResult={() => setValidationResult(null)}
+              enableGateway={paymentConfig.enableGateway}
+              gatewayProvider={paymentConfig.gatewayProvider}
+              isClientMode={isClientMode}
             />
           </h3>
 

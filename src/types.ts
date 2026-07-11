@@ -39,6 +39,9 @@ export interface PaymentConfig {
   whatsappTemplateConfirmed?: string;
   whatsappTemplate8h?: string;
   whatsappTemplate2h?: string;
+  enableGateway?: boolean;          // Enable automated credit card gateway (Stripe/MercadoPago)
+  gatewayProvider?: "Stripe" | "MercadoPago" | "PayPal";
+  gatewayApiKey?: string;           // Merchant gateway API Key
 }
 
 export interface BusinessStats {

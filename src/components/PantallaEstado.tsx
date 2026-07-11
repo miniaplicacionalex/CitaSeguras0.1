@@ -21,7 +21,7 @@ export default function PantallaEstado({
   return (
     <div id="pantalla-estado" className="p-4 max-w-md mx-auto space-y-6">
       {/* Resumen de Rendimiento widget */}
-      <BusinessPerformanceSummary stats={stats} />
+      <BusinessPerformanceSummary stats={stats} appointments={appointments} />
 
       {/* Actividad Reciente */}
       <div className="space-y-3">

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Appointment } from "../types";
 import AppointmentCard from "./AppointmentCard";
+import CalendarioAgenda from "./CalendarioAgenda";
 
 interface PantallaAgendaProps {
   appointments: Appointment[];
@@ -132,6 +133,12 @@ export default function PantallaAgenda({
           ))
         )}
       </div>
+
+      {/* Calendar view with scheduled, pending and rescheduled appointments */}
+      <CalendarioAgenda 
+        appointments={appointments} 
+        onSuccessToast={onSuccessToast} 
+      />
     </div>
   );
 }

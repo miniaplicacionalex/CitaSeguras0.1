@@ -91,6 +91,12 @@ export default function PantallaNegocio({
     paymentConfig.whatsappTemplate2h ||
     "⚠️ ¡Hola {nombre_cliente}! Recordatorio rápido de que tu cita para {servicio} comienza en 2 horas (a las {hora}). Agradecemos tu puntualidad. ¡Te vemos pronto!"
   );
+
+  // Working hours states
+  const [workingHoursStart, setWorkingHoursStart] = useState(paymentConfig.workingHoursStart || "09:00");
+  const [workingHoursEnd, setWorkingHoursEnd] = useState(paymentConfig.workingHoursEnd || "21:00");
+  const [breakStart, setBreakStart] = useState(paymentConfig.breakStart || "14:00");
+  const [breakEnd, setBreakEnd] = useState(paymentConfig.breakEnd || "16:00");
   
   // Link copied state
   const [copied, setCopied] = useState(false);
@@ -141,6 +147,10 @@ export default function PantallaNegocio({
     setEnableGateway(paymentConfig.enableGateway ?? false);
     setGatewayProvider(paymentConfig.gatewayProvider || "Stripe");
     setGatewayApiKey(paymentConfig.gatewayApiKey || "");
+    setWorkingHoursStart(paymentConfig.workingHoursStart || "09:00");
+    setWorkingHoursEnd(paymentConfig.workingHoursEnd || "21:00");
+    setBreakStart(paymentConfig.breakStart || "14:00");
+    setBreakEnd(paymentConfig.breakEnd || "16:00");
   }, [paymentConfig]);
 
   // Handle service field changes
@@ -217,8 +227,23 @@ export default function PantallaNegocio({
       enableGateway,
       gatewayProvider,
       gatewayApiKey,
+      workingHoursStart,
+      workingHoursEnd,
+      breakStart,
+      breakEnd,
     });
     onSuccessToast("¡Métodos de recepción de pagos y política de reembolso guardados!");
+  };
+
+  // Save working hours configuration
+  const handleSaveWorkingHours = () => {
+    onSavePaymentConfig({
+      ...paymentConfig,
+      workingHoursStart,
+      workingHoursEnd,
+      breakStart,
+      breakEnd,
+    });
   };
 
   // Download local CSV
@@ -400,6 +425,139 @@ export default function PantallaNegocio({
           className="w-full bg-[#004ac6] hover:bg-[#0049be] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <Save size={13} /> Guardar Lista de Servicios
+        </button>
+      </div>
+
+      {/* 1.5. APARTADO DE HORARIOS LABORALES Y COMIDA */}
+      <div id="seccion-horarios" className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <Clock size={16} className="text-[#004ac6]" /> Horario de Atención y Receso de Comida
+          </h3>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            Define el horario laboral de tu negocio. Los horarios fuera de jornada y la hora de comida se deshabilitarán y se marcarán en color rojo en el formulario de citas para evitar reservas erróneas.
+          </p>
+        </div>
+
+        <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Inicio de jornada */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Hora de Apertura (Inicio)
+              </label>
+              <select
+                value={workingHoursStart}
+                onChange={(e) => setWorkingHoursStart(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#004ac6] text-xs font-semibold text-slate-700"
+              >
+                {Array.from({ length: 24 }, (_, i) => {
+                  const val = i < 10 ? `0${i}:00` : `${i}:00`;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+
+            {/* Fin de jornada */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Hora de Cierre (Cierre)
+              </label>
+              <select
+                value={workingHoursEnd}
+                onChange={(e) => setWorkingHoursEnd(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#004ac6] text-xs font-semibold text-slate-700"
+              >
+                {Array.from({ length: 24 }, (_, i) => {
+                  const val = i < 10 ? `0${i}:00` : `${i}:00`;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Inicio comida */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inicio de Comida (Bloqueado)
+              </label>
+              <select
+                value={breakStart}
+                onChange={(e) => setBreakStart(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#004ac6] text-xs font-semibold text-slate-700"
+              >
+                {Array.from({ length: 24 }, (_, i) => {
+                  const val = i < 10 ? `0${i}:00` : `${i}:00`;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+
+            {/* Fin comida */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Fin de Comida (Reanudación)
+              </label>
+              <select
+                value={breakEnd}
+                onChange={(e) => setBreakEnd(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#004ac6] text-xs font-semibold text-slate-700"
+              >
+                {Array.from({ length: 24 }, (_, i) => {
+                  const val = i < 10 ? `0${i}:00` : `${i}:00`;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Visual timeline summary */}
+        <div className="border border-slate-100 p-3 rounded-xl space-y-2 text-[11px]">
+          <span className="font-bold text-slate-700 block">Esquema de Distribución de Horas:</span>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">Turno Matutino</span>
+              <span className="text-slate-600">De <strong>{workingHoursStart}</strong> a <strong>{breakStart}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">Receso de Comida</span>
+              <span className="text-slate-600">De <strong>{breakStart}</strong> a <strong>{breakEnd}</strong> (Citas Bloqueadas)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">Turno Vespertino</span>
+              <span className="text-slate-600">De <strong>{breakEnd}</strong> a <strong>{workingHoursEnd}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-800">Fuera de Horas</span>
+              <span className="text-slate-600">Antes de {workingHoursStart} y después de {workingHoursEnd} (Citas Bloqueadas)</span>
+            </div>
+          </div>
+          
+          <div className="pt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setWorkingHoursStart("09:00");
+                setBreakStart("14:00");
+                setBreakEnd("16:00");
+                setWorkingHoursEnd("21:00");
+                onSuccessToast("Se cargó la plantilla de horario de ejemplo: 9am-2pm, comida 2h, 4pm-9pm.");
+              }}
+              className="text-[10px] text-[#004ac6] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+            >
+              ✨ Cargar ejemplo (9am - 9pm con 2h comida)
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSaveWorkingHours}
+          className="w-full bg-[#004ac6] hover:bg-[#0049be] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <Save size={13} /> Guardar Horario de Labores
         </button>
       </div>
 

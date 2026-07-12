@@ -64,6 +64,14 @@ export default function PantallaRegistro({
     }
   }, [services, service]);
 
+  useEffect(() => {
+    if (paymentConfig && paymentConfig.workingHoursStart) {
+      setTime(paymentConfig.workingHoursStart);
+    } else {
+      setTime("09:00");
+    }
+  }, [paymentConfig]);
+
   // Countdown timer for booking urgency
   useEffect(() => {
     if (!paymentConfig.enableReservationTimer || bookedAppointment) return;
@@ -633,6 +641,7 @@ export default function PantallaRegistro({
           setTime={setTime}
           amount={amount}
           services={services}
+          paymentConfig={paymentConfig}
         />
 
         {/* Payment Management Card */}

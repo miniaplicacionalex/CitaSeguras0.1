@@ -43,6 +43,10 @@ export interface PaymentConfig {
   enableGateway?: boolean;          // Enable automated credit card gateway (Stripe/MercadoPago)
   gatewayProvider?: "Stripe" | "MercadoPago" | "PayPal";
   gatewayApiKey?: string;           // Merchant gateway API Key
+  workingHoursStart?: string;       // e.g. "09:00"
+  workingHoursEnd?: string;         // e.g. "21:00"
+  breakStart?: string;              // e.g. "14:00"
+  breakEnd?: string;                // e.g. "16:00"
 }
 
 export interface BusinessStats {

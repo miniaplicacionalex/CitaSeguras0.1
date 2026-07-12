@@ -1,5 +1,6 @@
+import React from "react";
 import { Clock } from "lucide-react";
-import { ServiceConfig } from "../types";
+import { ServiceConfig, PaymentConfig } from "../types";
 
 interface ServiceSelectorProps {
   service: string;
@@ -10,6 +11,7 @@ interface ServiceSelectorProps {
   setTime: (val: string) => void;
   amount: number;
   services: ServiceConfig[];
+  paymentConfig?: PaymentConfig;
 }
 
 export default function ServiceSelector({
@@ -21,7 +23,29 @@ export default function ServiceSelector({
   setTime,
   amount,
   services,
+  paymentConfig,
 }: ServiceSelectorProps) {
+  // Extract business hours from config, falling back to default values
+  const wStart = paymentConfig?.workingHoursStart || "09:00";
+  const wEnd = paymentConfig?.workingHoursEnd || "21:00";
+  const bStart = paymentConfig?.breakStart || "14:00";
+  const bEnd = paymentConfig?.breakEnd || "16:00";
+
+  // Generate the 24 hours list: ["00:00", "01:00", ..., "23:00"]
+  const hours = Array.from({ length: 24 }, (_, i) => {
+    return i < 10 ? `0${i}:00` : `${i}:00`;
+  });
+
+  // Helper to check if hour is during lunch break
+  const isBreakTime = (hh: string) => {
+    return hh >= bStart && hh < bEnd;
+  };
+
+  // Helper to check if hour is outside business working hours
+  const isOutsideWorkingHours = (hh: string) => {
+    return hh < wStart || hh >= wEnd;
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
       <h3 className="text-sm font-semibold text-slate-700 pb-2 border-b border-slate-100 flex items-center gap-2">
@@ -61,19 +85,48 @@ export default function ServiceSelector({
 
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-            Hora
+            Hora de la Cita
           </label>
           <select
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-[#004ac6] focus:ring-1 focus:ring-[#004ac6] transition-all cursor-pointer"
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-[#004ac6] focus:ring-1 focus:ring-[#004ac6] transition-all cursor-pointer font-medium text-slate-800"
           >
-            <option value="09:00 AM">09:00 AM</option>
-            <option value="10:30 AM">10:30 AM</option>
-            <option value="11:00 AM">11:00 AM</option>
-            <option value="12:00 PM">12:00 PM</option>
-            <option value="02:15 PM">02:15 PM</option>
-            <option value="04:00 PM">04:00 PM</option>
+            {hours.map((hh) => {
+              const inBreak = isBreakTime(hh);
+              const isOutside = isOutsideWorkingHours(hh);
+              const isBlocked = inBreak || isOutside;
+
+              let labelText = `${hh}`;
+              let styleObj: React.CSSProperties = {};
+              let clsName = "text-slate-800";
+
+              if (inBreak) {
+                labelText = `${hh} 🛑 [Hora de Comida - Bloqueado]`;
+                styleObj = { color: "#e11d48", fontWeight: "bold", backgroundColor: "#fef2f2" }; // Deep red text
+                clsName = "text-rose-600 font-bold bg-rose-50";
+              } else if (isOutside) {
+                labelText = `${hh} 🚫 [Fuera de Horas Labores]`;
+                styleObj = { color: "#94a3b8", textDecoration: "line-through" }; // Light slate gray text
+                clsName = "text-slate-400 line-through";
+              } else {
+                labelText = `${hh} 🟢 [Disponible]`;
+                styleObj = { color: "#059669" }; // Emerald-600
+                clsName = "text-emerald-600 font-medium";
+              }
+
+              return (
+                <option
+                  key={hh}
+                  value={hh}
+                  disabled={isBlocked}
+                  style={styleObj}
+                  className={clsName}
+                >
+                  {labelText}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>

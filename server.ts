@@ -3,6 +3,14 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import {
+  getBusinessCatalog,
+  saveBusinessCatalog,
+  saveAppointment,
+  updateAppointmentInSheetServer,
+  verifySubscription,
+  initializeSheets
+} from "./src/utils/googleServiceAccount";
 
 dotenv.config();
 
@@ -10,6 +18,72 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
+
+// Self-heal/initialize spreadsheets on boot
+initializeSheets().then((ok) => {
+  if (ok) console.log("✅ Google Sheets Database initialized successfully via Service Account.");
+  else console.log("⚠️ Google Sheets Database could not be auto-initialized (credentials might be missing or incorrect).");
+});
+
+// Database Endpoint: Get catalog by business_id
+app.get("/api/catalog/:business_id", async (req, res) => {
+  const { business_id } = req.params;
+  try {
+    const catalog = await getBusinessCatalog(business_id);
+    if (catalog) {
+      return res.json(catalog);
+    } else {
+      return res.status(404).json({ error: "Catálogo no encontrado para el id proporcionado" });
+    }
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || "Error al obtener el catálogo" });
+  }
+});
+
+// Database Endpoint: Save catalog config by business_id
+app.post("/api/catalog/:business_id", async (req, res) => {
+  const { business_id } = req.params;
+  const { services, paymentConfig } = req.body;
+  try {
+    const success = await saveBusinessCatalog(business_id, services, paymentConfig);
+    return res.json({ success });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || "Error al guardar el catálogo" });
+  }
+});
+
+// Database Endpoint: Save appointment
+app.post("/api/save-appointment", async (req, res) => {
+  const { businessId, appointment } = req.body;
+  try {
+    const rowIndex = await saveAppointment(businessId, appointment);
+    return res.json({ success: rowIndex !== -1, rowIndex });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || "Error al guardar la cita" });
+  }
+});
+
+// Database Endpoint: Update appointment
+app.put("/api/update-appointment", async (req, res) => {
+  const { rowIndex, status, receiptUrl, receiptStatus, absences } = req.body;
+  try {
+    const success = await updateAppointmentInSheetServer(Number(rowIndex), status, receiptUrl, receiptStatus, absences);
+    return res.json({ success });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || "Error al actualizar la cita" });
+  }
+});
+
+// Database Endpoint: Check subscription status by business_id
+app.get("/api/subscription/:business_id", async (req, res) => {
+  const { business_id } = req.params;
+  try {
+    const subscription = await verifySubscription(business_id);
+    return res.json(subscription);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || "Error al verificar la suscripción" });
+  }
+});
 
 // Initialize Gemini SDK lazily to prevent crashing on startup if key is missing
 let ai: GoogleGenAI | null = null;

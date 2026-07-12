@@ -83,7 +83,11 @@ export default function App() {
       refundPolicyDisclaimer: "⚠️ NOTA DE SEGURIDAD: Para asegurar el espacio de su cita y los insumos requeridos, el depósito del anticipo de reserva no es reembolsable en caso de inasistencia o de no reprogramar con al menos 24 horas de anticipación.",
       enableUrgencyBadges: true,
       enableReservationTimer: true,
-      conversionTacticDiscount: "5% de Descuento Extra si seleccionas pago al 100% como anticipo."
+      conversionTacticDiscount: "5% de Descuento Extra si seleccionas pago al 100% como anticipo.",
+      workingHoursStart: "09:00",
+      workingHoursEnd: "21:00",
+      breakStart: "14:00",
+      breakEnd: "16:00"
     };
   });
 
@@ -168,6 +172,9 @@ export default function App() {
     return list;
   })();
 
+  const [businessId, setBusinessId] = useState<string>("default_business");
+  const [subscriptionState, setSubscriptionState] = useState<{ plan: string; estado: string; expiration: string } | null>(null);
+
   // Dynamic services/products configuration
   const [services, setServices] = useState<ServiceConfig[]>(() => {
     if (urlServices) return urlServices;
@@ -181,52 +188,70 @@ export default function App() {
     ];
   });
 
-  const saveServices = (newServices: ServiceConfig[]) => {
+  const saveServices = async (newServices: ServiceConfig[]) => {
     setServices(newServices);
     localStorage.setItem("cs_services_config", JSON.stringify(newServices));
+    try {
+      await fetch(`/api/catalog/${businessId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ services: newServices, paymentConfig }),
+      });
+    } catch (e) {
+      console.error("Error syncing services to remote spreadsheet:", e);
+    }
   };
 
   useEffect(() => {
-    // If we have URL data parameter, do NOT overwrite the state with defaults
-    if (isClientMode && urlPaymentConfig) {
-      return;
-    }
+    const loadCatalogAndSubscription = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlBid = params.get("business_id") || params.get("business") || params.get("bid");
+      const bid = urlBid || user?.uid || "default_business";
+      setBusinessId(bid);
 
-    const bid = user?.uid || "default_business";
-    const saved = localStorage.getItem(`cs_payment_config_${bid}`);
-    if (saved) {
-      setPaymentConfig(JSON.parse(saved));
-    } else {
-      const lastActive = localStorage.getItem("cs_payment_config_last_active");
-      if (lastActive) {
-        setPaymentConfig(JSON.parse(lastActive));
-      } else {
-        setPaymentConfig({
-          cardOrSpei: bid === "default_business" ? "1234 5678 9012 3456" : "",
-          referenceType: bid === "default_business" ? "tarjeta" : "clabe",
-          bankName: bid === "default_business" ? "BBVA Bancomer" : "",
-          accountHolder: bid === "default_business" ? "CitaSeguras Negocios S.A." : "",
-          alternativePayLink: bid === "default_business" ? "https://link.mercadopago.com.mx/citaseguras" : "",
-          refundPolicyDisclaimer: "⚠️ NOTA DE SEGURIDAD: Para asegurar el espacio de su cita y los insumos requeridos, el depósito del anticipo de reserva no es reembolsable en caso de inasistencia o de no reprogramar con al menos 24 horas de anticipación.",
-          enableUrgencyBadges: true,
-          enableReservationTimer: true,
-          conversionTacticDiscount: "5% de Descuento Extra si seleccionas pago al 100% como anticipo.",
-          whatsappTemplatePending: "Hola {nombre_cliente}, detectamos tu pago como pendiente. Por favor confírmanos si ya realizaste tu depósito/transferencia para verificarlo por IA de CitaSeguras y activar tu cita de {servicio}. ¡Gracias!",
-          whatsappTemplateConfirmed: "¡Hola {nombre_cliente}! Tu cita para {servicio} está confirmada para el día {fecha} a las {hora}. Te recordamos asistir puntualmente. ¡Te esperamos!",
-          whatsappTemplate8h: "¡Hola {nombre_cliente}! Te recordamos que tu cita para {servicio} es hoy mismo en 8 horas (a las {hora}). Por favor confírmanos que asistirás respondiendo con un 'OK' o un emoticón. ¡Gracias!",
-          whatsappTemplate2h: "⚠️ ¡Hola {nombre_cliente}! Recordatorio rápido de que tu cita para {servicio} comienza en 2 horas (a las {hora}). Agradecemos tu puntualidad. ¡Te vemos pronto!"
-        });
+      try {
+        const res = await fetch(`/api/catalog/${bid}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.services) setServices(data.services);
+          if (data.paymentConfig) setPaymentConfig(data.paymentConfig);
+          console.log(`Loaded catalog from central Google Sheets for: ${bid}`);
+        }
+      } catch (e) {
+        console.error("Error loading remote catalog, using local defaults:", e);
       }
-    }
+      
+      try {
+        const subRes = await fetch(`/api/subscription/${bid}`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          setSubscriptionState(subData);
+          console.log(`Loaded subscription state for: ${bid}`, subData);
+        }
+      } catch (e) {
+        console.error("Error loading subscription state:", e);
+      }
+    };
+
+    loadCatalogAndSubscription();
   }, [user]);
 
-  const savePaymentConfig = (config: PaymentConfig) => {
-    const bid = user?.uid || "default_business";
+  const savePaymentConfig = async (config: PaymentConfig) => {
+    const bid = businessId;
     setPaymentConfig(config);
     localStorage.setItem(`cs_payment_config_${bid}`, JSON.stringify(config));
     localStorage.setItem("cs_payment_config_default_business", JSON.stringify(config));
     localStorage.setItem("cs_payment_config_last_active", JSON.stringify(config));
-    showToast("¡Métodos de recepción de pagos guardados con éxito!");
+    try {
+      await fetch(`/api/catalog/${bid}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ services, paymentConfig: config }),
+      });
+    } catch (e) {
+      console.error("Error syncing payment config to remote spreadsheet:", e);
+    }
+    showToast("¡Métodos de pagos guardados y sincronizados con la base de datos!");
   };
 
   // Load state from local storage or fallback to defaults (with automatic 35-day cleanup)
@@ -384,6 +409,24 @@ export default function App() {
     // recalculate statistics
     recalculateStats(updatedApps);
 
+    // Sync with Central Service Account Spreadsheet via Server
+    try {
+      const serverRes = await fetch("/api/save-appointment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId, appointment: newApp }),
+      });
+      if (serverRes.ok) {
+        const serverData = await serverRes.json();
+        if (serverData.success && serverData.rowIndex) {
+          newApp.sheetRowIndex = serverData.rowIndex;
+          console.log(`Cita guardada en base de datos central en fila ${serverData.rowIndex}`);
+        }
+      }
+    } catch (e) {
+      console.error("Error saving appointment to server-side central database:", e);
+    }
+
     // Sync with Google Workspace if authenticated
     if (accessToken) {
       try {
@@ -421,15 +464,15 @@ export default function App() {
           const eventId = await scheduleCalendarEvent(accessToken, newApp);
           newApp.calendarEventId = eventId;
         }
-
-        // Update with the sheet reference and calendar IDs
-        const syncedApps = updatedApps.map((a) => (a.id === newApp.id ? newApp : a));
-        setAppointments(syncedApps);
-        localStorage.setItem("cs_appointments", JSON.stringify(syncedApps));
       } catch (err) {
         console.error("Error al sincronizar con Google Workspace:", err);
       }
     }
+
+    // Update with the sheet reference and calendar IDs
+    const syncedApps = updatedApps.map((a) => (a.id === newApp.id ? newApp : a));
+    setAppointments(syncedApps);
+    localStorage.setItem("cs_appointments", JSON.stringify(syncedApps));
   };
 
   // Manually approving a payment
@@ -449,8 +492,26 @@ export default function App() {
     localStorage.setItem("cs_appointments", JSON.stringify(updatedApps));
     recalculateStats(updatedApps);
 
-    // Sync Workspace status update
     const targetApp = updatedApps.find((app) => app.id === id);
+    if (targetApp && targetApp.sheetRowIndex) {
+      // Sync with Central Service Account Spreadsheet via Server
+      try {
+        await fetch("/api/update-appointment", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rowIndex: targetApp.sheetRowIndex,
+            status: "Confirmado",
+            receiptUrl: targetApp.receiptUrl,
+            receiptStatus: "APROBADO",
+          }),
+        });
+      } catch (e) {
+        console.error("Error updating appointment in central database:", e);
+      }
+    }
+
+    // Sync Workspace status update
     if (targetApp && accessToken) {
       try {
         // 1. Update Sheet row
@@ -496,8 +557,26 @@ export default function App() {
     localStorage.setItem("cs_appointments", JSON.stringify(updatedApps));
     recalculateStats(updatedApps);
 
-    // Sync Google Sheets
     const targetApp = updatedApps.find((app) => app.id === id);
+    if (targetApp && targetApp.sheetRowIndex) {
+      // Sync with Central Service Account Spreadsheet via Server
+      try {
+        await fetch("/api/update-appointment", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rowIndex: targetApp.sheetRowIndex,
+            status: "Cancelado",
+            receiptUrl: targetApp.receiptUrl,
+            receiptStatus: "RECHAZADO",
+          }),
+        });
+      } catch (e) {
+        console.error("Error updating appointment in central database:", e);
+      }
+    }
+
+    // Sync Google Sheets
     if (targetApp && accessToken && spreadsheetId && targetApp.sheetRowIndex) {
       try {
         await updateAppointmentInSheet(

@@ -37,7 +37,6 @@ export default function App() {
   
   // Notification / Feedback State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [notificationCount, setNotificationCount] = useState(2); // Start with Sarah and David "Por Verificar"
 
   // Decode URL configuration if present (for client booking link)
   const isClientMode = typeof window !== "undefined" && window.location.search.includes("cliente=true");
@@ -330,11 +329,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Track the count of active notifications (Pending Validation + Today's Reminders)
-  useEffect(() => {
-    setNotificationCount(notifications.length);
-  }, [appointments, paymentConfig]);
-
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -596,7 +590,16 @@ export default function App() {
   // Recalculates stats based on the appointments list
   const recalculateStats = (appsList: Appointment[]) => {
     const totalCount = appsList.length;
-    if (totalCount === 0) return;
+    if (totalCount === 0) {
+      const resetStats: BusinessStats = {
+        attendanceRate: 100,
+        confirmedCount: 0,
+        rescheduledCount: 0,
+      };
+      setStats(resetStats);
+      localStorage.setItem("cs_stats", JSON.stringify(resetStats));
+      return;
+    }
 
     const confirmed = appsList.filter((a) => a.paymentStatus === "Confirmado").length;
     const canceled = appsList.filter((a) => a.paymentStatus === "Cancelado").length;
@@ -604,12 +607,12 @@ export default function App() {
 
     // Attendance rate formula: confirmed appointments over total valid ones (not canceled)
     const activeApps = totalCount - canceled;
-    const attendanceRate = activeApps > 0 ? Math.round((confirmed / activeApps) * 100) : 85;
+    const attendanceRate = activeApps > 0 ? Math.round((confirmed / activeApps) * 100) : 100;
 
     const updatedStats: BusinessStats = {
-      attendanceRate: Math.max(50, Math.min(100, attendanceRate)), // Clamp between 50% and 100%
-      confirmedCount: 124 + confirmed, // Keep base count of screenshot + custom new ones
-      rescheduledCount: 12 + rescheduled,
+      attendanceRate: Math.max(0, Math.min(100, attendanceRate)),
+      confirmedCount: confirmed,
+      rescheduledCount: rescheduled,
     };
 
     setStats(updatedStats);
@@ -749,7 +752,7 @@ export default function App() {
             onLogin={handleLogin}
             onLogout={handleLogout}
             isLoggingIn={isLoggingIn}
-            notificationCount={notificationCount}
+            notificationCount={notifications.length}
             notifications={notifications}
           />
         )}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Bell, ShieldAlert, LogIn, LogOut, AlertTriangle, Clock, MessageSquare, ExternalLink } from "lucide-react";
 import { User } from "firebase/auth";
 import { AppNotification } from "../types";
+import logoUrl from "../assets/images/citaseguras_logo_1783949144850.jpg";
 
 interface HeaderProps {
   user: User | null;
@@ -52,7 +53,7 @@ export default function Header({
               <img
                 src={
                   user.photoURL ||
-                  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop"
+                  logoUrl
                 }
                 alt="Profile"
                 className="w-10 h-10 rounded-full object-cover border-2 border-white/80 shadow-sm"

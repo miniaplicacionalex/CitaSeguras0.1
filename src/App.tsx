@@ -10,6 +10,7 @@ import PantallaNegocio from "./components/PantallaNegocio";
 import { initialAppointments, initialStats } from "./data";
 import { Appointment, BusinessStats, PaymentConfig, ServiceConfig, AppNotification } from "./types";
 import { User } from "firebase/auth";
+import logoUrl from "./assets/images/citaseguras_logo_1783949144850.jpg";
 import { 
   initAuth, 
   googleSignIn, 
@@ -294,7 +295,7 @@ export default function App() {
         uid: "demo-workspace-user",
         displayName: "Clínica Dental Demo (Simulado)",
         email: "demo-dental@citaseguras.com",
-        photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop"
+        photoURL: logoUrl
       } as any);
       setAccessToken("demo-access-token-12345");
       setSpreadsheetId("spreadsheet_demo_12345");
@@ -371,7 +372,7 @@ export default function App() {
       uid: "demo-workspace-user",
       displayName: "Clínica Dental Demo (Simulado)",
       email: "demo-dental@citaseguras.com",
-      photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop"
+      photoURL: logoUrl
     } as any);
     setAccessToken("demo-access-token-12345");
     setSpreadsheetId("spreadsheet_demo_12345");

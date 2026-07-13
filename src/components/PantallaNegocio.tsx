@@ -100,11 +100,19 @@ export default function PantallaNegocio({
   
   // Link copied state
   const [copied, setCopied] = useState(false);
+  const [linkType, setLinkType] = useState<"short" | "offline">("short");
 
   // Storage optimization state
   const [isCleanupEnabled, setIsCleanupEnabled] = useState(true);
   const [isCleaning, setIsCleaning] = useState(false);
   const [isSendingReport, setIsSendingReport] = useState(false);
+
+  // Helper to generate an elegant short dynamic booking URL using business ID
+  const getShortBookingUrl = () => {
+    if (typeof window === "undefined") return "";
+    const bid = user?.uid || "default_business";
+    return `${window.location.origin}/?cliente=true&bid=${bid}`;
+  };
 
   // Helper to generate a fully custom encoded link for clients containing current pricing & payment configs
   const getEncodedBookingUrl = () => {
@@ -885,22 +893,54 @@ export default function PantallaNegocio({
           </p>
         </div>
 
+        {/* Selector de Tipo de Enlace */}
+        <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+          <button
+            type="button"
+            onClick={() => setLinkType("short")}
+            className={`flex-1 text-center py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              linkType === "short"
+                ? "bg-white text-[#004ac6] shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            ⚡ Enlace Corto Sincronizado
+          </button>
+          <button
+            type="button"
+            onClick={() => setLinkType("offline")}
+            className={`flex-1 text-center py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              linkType === "offline"
+                ? "bg-white text-[#004ac6] shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            📦 Enlace Portátil Offline
+          </button>
+        </div>
+
         {/* Dynamic Booking Link Box */}
-        <div className="bg-[#f8fafc] border border-slate-200/60 rounded-xl p-3 space-y-2.5">
-          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-            Enlace Directo para Clientes
-          </label>
+        <div className="bg-[#f8fafc] border border-slate-200/60 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              {linkType === "short" ? "Enlace Corto (Recomendado)" : "Enlace Codificado Completo"}
+            </label>
+            <span className="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-100">
+              {linkType === "short" ? "Sincronizado" : "Autónomo"}
+            </span>
+          </div>
+
           <div className="flex gap-2">
             <input
               type="text"
               readOnly
-              value={getEncodedBookingUrl()}
-              className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] font-mono font-semibold text-[#004ac6] select-all outline-none animate-fade-in"
+              value={linkType === "short" ? getShortBookingUrl() : getEncodedBookingUrl()}
+              className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] font-mono font-semibold text-[#004ac6] select-all outline-none"
             />
             <button
               type="button"
               onClick={() => {
-                const url = getEncodedBookingUrl();
+                const url = linkType === "short" ? getShortBookingUrl() : getEncodedBookingUrl();
                 navigator.clipboard.writeText(url);
                 setCopied(true);
                 onSuccessToast("¡Enlace de reservación copiado al portapapeles!");
@@ -913,10 +953,16 @@ export default function PantallaNegocio({
             </button>
           </div>
 
-          <div className="flex justify-between items-center pt-1">
-            <span className="text-[10px] text-slate-400 font-medium">✨ Listo para WhatsApp, Instagram o Facebook</span>
+          <p className="text-[10px] text-slate-500 leading-normal">
+            {linkType === "short" 
+              ? "💡 Carga tus servicios y configuración en tiempo real desde Google Sheets. Es limpio, corto y estético para WhatsApp."
+              : "💡 Contiene toda la información integrada. Funciona 100% offline, pero genera un enlace muy largo."}
+          </p>
+
+          <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+            <span className="text-[10px] text-slate-400 font-medium">✨ Listo para WhatsApp e Instagram</span>
             <a
-              href={getEncodedBookingUrl()}
+              href={linkType === "short" ? getShortBookingUrl() : getEncodedBookingUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-[#004ac6] hover:underline font-bold flex items-center gap-0.5"

@@ -8,7 +8,18 @@
 
 @keyframes slideUp {
   from {
-    transform: translate(-50%, 20%);
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUpToast {
+  from {
+    transform: translate(-50%, -20px);
     opacity: 0;
   }
   to {
@@ -28,6 +39,10 @@
 
 .animate-slide-up {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up-toast {
+  animation: slideUpToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fade-in {

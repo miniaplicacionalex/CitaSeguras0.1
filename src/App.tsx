@@ -660,11 +660,11 @@ export default function App() {
         
         {/* Google Workspace Simulation Helper Modal */}
         {showDemoLoginSuggestion && (
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl border border-slate-100 space-y-4 animate-slide-up">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white w-full max-w-[340px] rounded-2xl p-4 shadow-2xl border border-slate-100 space-y-3 animate-slide-up max-h-[90%] overflow-y-auto">
               <div className="flex items-start justify-between">
-                <div className="bg-blue-50 p-2.5 rounded-xl border border-blue-100">
-                  <Sparkles size={24} className="text-[#004ac6] animate-pulse" />
+                <div className="bg-blue-50 p-2 rounded-xl border border-blue-100">
+                  <Sparkles size={20} className="text-[#004ac6] animate-pulse" />
                 </div>
                 <button 
                   onClick={() => setShowDemoLoginSuggestion(false)}
@@ -674,51 +674,55 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="space-y-1.5">
-                <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+              <div className="space-y-1">
+                <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">
                   ¿Ventana bloqueada por el navegador?
                 </h3>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Los navegadores suelen bloquear ventanas emergentes de Google (OAuth) dentro de marcos de vista previa (iFrames).
+                <p className="text-[10px] sm:text-[11px] text-slate-500 leading-relaxed">
+                  Los navegadores bloquean las ventanas de inicio de sesión de Google (OAuth) dentro de marcos de vista previa (iFrames).
                 </p>
+                <div className="bg-amber-50 text-amber-800 text-[10px] p-2 rounded-lg border border-amber-100 mt-1 space-y-1">
+                  <p className="font-bold">Para usar tu cuenta real de Google Workspace:</p>
+                  <p>Haz clic en el botón de <strong>abrir en nueva pestaña</strong> (esquina superior derecha en AI Studio) y presiona "Iniciar sesión" allí.</p>
+                </div>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                  Beneficios del Modo Demostración:
+              <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 space-y-1.5">
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  O usa el Modo Demostración instantáneo:
                 </p>
-                <ul className="text-[11px] text-slate-600 space-y-1.5">
-                  <li className="flex items-start gap-2">
+                <ul className="text-[10px] sm:text-[11px] text-slate-600 space-y-1">
+                  <li className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold">✓</span>
-                    <span><strong>Google Sheets:</strong> Sincroniza las citas en tiempo real.</span>
+                    <span><strong>Google Sheets:</strong> Sincroniza en tiempo real.</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold">✓</span>
-                    <span><strong>Google Calendar:</strong> Agenda las citas de tus clientes automáticamente.</span>
+                    <span><strong>Google Calendar:</strong> Agenda citas automáticamente.</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold">✓</span>
-                    <span><strong>Google Drive:</strong> Sube de forma segura los comprobantes recibidos.</span>
+                    <span><strong>Google Drive:</strong> Sube comprobantes de pago.</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold">✓</span>
-                    <span><strong>Gmail:</strong> Envía reportes de asistencia en formato CSV.</span>
+                    <span><strong>Gmail:</strong> Envía reportes de asistencia.</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex flex-col gap-1.5 pt-0.5">
                 <button
                   type="button"
                   onClick={handleDemoSignIn}
-                  className="w-full bg-[#004ac6] hover:bg-[#0049be] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full bg-[#004ac6] hover:bg-[#0049be] text-white font-bold py-2 px-3 rounded-xl text-[11px] transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <ShieldCheck size={15} /> Activar Modo Demostración
+                  <ShieldCheck size={14} /> Activar Modo Demostración
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDemoLoginSuggestion(false)}
-                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-xl text-xs transition-all text-center cursor-pointer"
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1.5 px-3 rounded-xl text-[11px] transition-all text-center cursor-pointer"
                 >
                   Continuar en Modo Local
                 </button>
@@ -729,7 +733,7 @@ export default function App() {
 
         {/* Dynamic Toast Alert */}
         {toastMessage && (
-          <div className="fixed sm:absolute top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm bg-slate-900 text-white text-xs font-semibold py-3 px-4 rounded-xl shadow-lg border border-slate-800 flex items-center gap-2.5 animate-slide-up">
+          <div className="fixed sm:absolute top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm bg-slate-900 text-white text-xs font-semibold py-3 px-4 rounded-xl shadow-lg border border-slate-800 flex items-center gap-2.5 animate-slide-up-toast">
             <div className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
             <span>{toastMessage}</span>
           </div>

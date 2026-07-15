@@ -1,10 +1,24 @@
 import { JWT } from "google-auth-library";
 import { ServiceConfig, PaymentConfig, Appointment } from "../types";
 
-// Parse environment variables
-const clientEmail = process.env.CORREO_ELECTRÓNICO_DE_LA_CUENTA_DE_SERVICE;
-const privateKey = (process.env.CLAVE_PRIVADA_DE_GOOGLE || "").replace(/\\n/g, "\n").trim();
-const spreadsheetId = process.env.ID_DE_HOJA_DE_GOOGLE;
+// Parse environment variables with robust fallbacks for truncated names in AI Studio UI
+const clientEmail = 
+  process.env.CORREO_ELECTRÓNICO_DE_LA_CUENTA_DE_SERVICE || 
+  process.env.CORREO_ELECTRÓNIC || 
+  process.env.CORREO_ELECTRÓNICO || 
+  "";
+
+const rawPrivateKey = 
+  process.env.CLAVE_PRIVADA_DE_GOOGLE || 
+  process.env.CLAVE_PRIVADA_DE_C || 
+  process.env.CLAVE_PRIVADA || 
+  "";
+const privateKey = rawPrivateKey.replace(/\\n/g, "\n").trim();
+
+const spreadsheetId = 
+  process.env.ID_DE_HOJA_DE_GOOGLE || 
+  process.env.ID_DE_HOJA_DE_GOO || 
+  "";
 
 // Lazy initialize JWT client
 let jwtClient: JWT | null = null;

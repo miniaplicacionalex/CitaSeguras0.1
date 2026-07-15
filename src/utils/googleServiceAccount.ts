@@ -406,3 +406,57 @@ export async function verifySubscription(businessId: string): Promise<{ plan: st
     return null;
   }
 }
+
+/**
+ * 6. LECTURA DE CITAS POR business_id
+ */
+export async function getBusinessAppointments(businessId: string): Promise<Appointment[]> {
+  const client = getJwtClient();
+  if (!client || !spreadsheetId) return [];
+
+  try {
+    await initializeSheets();
+    const headers = await getAuthHeaders();
+    
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Citas!A:O`, {
+      headers,
+    });
+
+    if (!res.ok) {
+      console.error("Failed to read Citas from sheet:", await res.text());
+      return [];
+    }
+
+    const data = await res.json();
+    const rows = data.values || [];
+    const appointments: Appointment[] = [];
+    
+    // Find matching businessId rows (skip headers row index 0)
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.length > 12 && row[12] === businessId) {
+        appointments.push({
+          id: row[0] || "",
+          clientName: row[1] || "",
+          phone: row[2] || "",
+          email: row[3] || "",
+          service: row[4] || "",
+          date: row[5] || "",
+          time: row[6] || "",
+          amount: parseFloat(row[7]) || 0,
+          paymentMethod: (row[8] || "OXXO") as any,
+          paymentStatus: (row[9] || "Por Verificar") as any,
+          receiptUrl: row[10] || "",
+          receiptStatus: (row[11] || "NONE") as any,
+          sheetRowIndex: i + 1, // Store 1-based index in sheet
+          absences: parseInt(row[13], 10) || 0,
+        });
+      }
+    }
+    return appointments;
+  } catch (error) {
+    console.error("Error getting business appointments:", error);
+    return [];
+  }
+}
+

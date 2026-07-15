@@ -9,7 +9,8 @@ import {
   saveAppointment,
   updateAppointmentInSheetServer,
   verifySubscription,
-  initializeSheets
+  initializeSheets,
+  getBusinessAppointments
 } from "./src/utils/googleServiceAccount";
 
 dotenv.config();
@@ -23,6 +24,17 @@ app.use(express.json({ limit: "10mb" }));
 initializeSheets().then((ok) => {
   if (ok) console.log("✅ Google Sheets Database initialized successfully via Service Account.");
   else console.log("⚠️ Google Sheets Database could not be auto-initialized (credentials might be missing or incorrect).");
+});
+
+// Database Endpoint: Get appointments by business_id
+app.get("/api/appointments/:business_id", async (req, res) => {
+  const { business_id } = req.params;
+  try {
+    const appointments = await getBusinessAppointments(business_id);
+    return res.json(appointments);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || "Error al obtener las citas" });
+  }
 });
 
 // Database Endpoint: Get catalog by business_id

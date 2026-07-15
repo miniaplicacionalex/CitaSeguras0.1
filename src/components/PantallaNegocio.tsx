@@ -36,6 +36,8 @@ interface PantallaNegocioProps {
   triggerCleanup: () => void;
   triggerMonthlyReportEmail: () => Promise<boolean>;
   onSuccessToast: (msg: string) => void;
+  businessId: string;
+  onChangeBusinessId: (newId: string) => void;
 }
 
 export default function PantallaNegocio({
@@ -49,9 +51,16 @@ export default function PantallaNegocio({
   triggerCleanup,
   triggerMonthlyReportEmail,
   onSuccessToast,
+  businessId,
+  onChangeBusinessId,
 }: PantallaNegocioProps) {
   // Local service editing state
   const [localServices, setLocalServices] = useState<ServiceConfig[]>([]);
+  const [tempBusinessId, setTempBusinessId] = useState(businessId || "");
+
+  useEffect(() => {
+    setTempBusinessId(businessId);
+  }, [businessId]);
   
   // Local payment config state
   const [cardOrSpei, setCardOrSpei] = useState(paymentConfig.cardOrSpei || "");
@@ -110,7 +119,7 @@ export default function PantallaNegocio({
   // Helper to generate an elegant short dynamic booking URL using business ID
   const getShortBookingUrl = () => {
     if (typeof window === "undefined") return "";
-    const bid = user?.uid || "default_business";
+    const bid = businessId || "default_business";
     return `${window.location.origin}/?cliente=true&bid=${bid}`;
   };
 
@@ -312,6 +321,57 @@ export default function PantallaNegocio({
         <p className="text-xs text-slate-500">
           Personaliza los servicios de tu negocio, los anticipos requeridos y los métodos de pago.
         </p>
+      </div>
+
+      {/* SECCIÓN: IDENTIFICADOR DE NEGOCIO */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 shadow-xs space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🆔</span>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">Identificador Único del Negocio</h3>
+            <p className="text-[10px] text-slate-500 leading-tight">
+              Escribe un nombre único para tu negocio (ej. <code className="bg-blue-100/50 px-1 py-0.5 rounded text-blue-700 font-semibold">spa-bella</code> o <code className="bg-blue-100/50 px-1 py-0.5 rounded text-blue-700 font-semibold">barberia-alex</code>) para separar tu catálogo y citas de otros negocios de manera 100% independiente.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={tempBusinessId}
+            disabled={!!user && user.uid !== "demo-workspace-user"}
+            onChange={(e) => {
+              const cleaned = e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
+              setTempBusinessId(cleaned);
+            }}
+            placeholder="ej. mi-negocio"
+            className="flex-1 px-3 py-2 text-xs font-mono font-bold border border-blue-200 rounded-xl bg-white focus:outline-none focus:border-[#004ac6] focus:ring-1 focus:ring-[#004ac6] disabled:bg-slate-100 disabled:text-slate-400 text-slate-800"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!tempBusinessId.trim()) {
+                onSuccessToast("⚠️ Por favor ingresa un identificador válido.");
+                return;
+              }
+              onChangeBusinessId(tempBusinessId);
+            }}
+            disabled={!!user && user.uid !== "demo-workspace-user"}
+            className="px-4 py-2 bg-[#004ac6] hover:bg-[#0049be] text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed"
+          >
+            Actualizar ID
+          </button>
+        </div>
+
+        {user && user.uid !== "demo-workspace-user" ? (
+          <p className="text-[9px] text-emerald-700 font-semibold leading-normal">
+            ✓ Cuenta activa: Tu identificador está enlazado a tu cuenta de Google de forma segura.
+          </p>
+        ) : (
+          <p className="text-[9px] text-slate-500 leading-normal">
+            💡 Al cambiar este ID, se cargará el catálogo y citas correspondientes a este nuevo identificador en este dispositivo.
+          </p>
+        )}
       </div>
 
       {/* 1. PRODUCTOS Y SERVICIOS CONFIG */}

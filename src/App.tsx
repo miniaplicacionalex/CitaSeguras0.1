@@ -202,11 +202,57 @@ export default function App() {
     }
   };
 
+  const updateBusinessId = async (newId: string) => {
+    const cleanedId = newId.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
+    if (!cleanedId) return;
+
+    setBusinessId(cleanedId);
+    if (!user) {
+      localStorage.setItem("cs_guest_business_id", cleanedId);
+    }
+
+    showToast(`Cambiando a negocio: "${cleanedId}"...`);
+
+    // Immediately load configuration and appointments for this business ID
+    try {
+      const res = await fetch(`/api/catalog/${cleanedId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.services) setServices(data.services);
+        if (data.paymentConfig) setPaymentConfig(data.paymentConfig);
+        showToast(`Catálogo de "${cleanedId}" cargado correctamente.`);
+      } else {
+        showToast(`ID "${cleanedId}" no tiene catálogo aún. ¡Configura y guarda para crearlo!`);
+      }
+    } catch (e) {
+      console.error("Error loading custom business catalog:", e);
+    }
+
+    try {
+      const appsRes = await fetch(`/api/appointments/${cleanedId}`);
+      if (appsRes.ok) {
+        const appsData = await appsRes.json();
+        if (appsData && Array.isArray(appsData)) {
+          setAppointments(appsData);
+          localStorage.setItem("cs_appointments", JSON.stringify(appsData));
+          recalculateStats(appsData);
+        } else {
+          setAppointments([]);
+          localStorage.setItem("cs_appointments", JSON.stringify([]));
+          recalculateStats([]);
+        }
+      }
+    } catch (e) {
+      console.error("Error loading custom business appointments:", e);
+    }
+  };
+
   useEffect(() => {
     const loadCatalogAndSubscription = async () => {
       const params = new URLSearchParams(window.location.search);
       const urlBid = params.get("business_id") || params.get("business") || params.get("bid");
-      const bid = urlBid || user?.uid || "default_business";
+      const savedGuestBid = localStorage.getItem("cs_guest_business_id");
+      const bid = urlBid || user?.uid || savedGuestBid || "default_business";
       setBusinessId(bid);
 
       try {
@@ -230,6 +276,21 @@ export default function App() {
         }
       } catch (e) {
         console.error("Error loading subscription state:", e);
+      }
+
+      try {
+        const appsRes = await fetch(`/api/appointments/${bid}`);
+        if (appsRes.ok) {
+          const appsData = await appsRes.json();
+          if (appsData && Array.isArray(appsData)) {
+            setAppointments(appsData);
+            localStorage.setItem("cs_appointments", JSON.stringify(appsData));
+            recalculateStats(appsData);
+            console.log(`Loaded ${appsData.length} central appointments for: ${bid}`);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading remote appointments:", e);
       }
     };
 
@@ -825,6 +886,8 @@ export default function App() {
                   triggerCleanup={triggerCleanup}
                   triggerMonthlyReportEmail={triggerMonthlyReportEmail}
                   onSuccessToast={showToast}
+                  businessId={businessId}
+                  onChangeBusinessId={updateBusinessId}
                 />
               )}
             </>
